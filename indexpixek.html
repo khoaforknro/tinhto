@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gửi Cậu...</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        #rotate-message {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            text-align: center;
+            font-size: 1.2rem;
+            padding: 20px;
+        }
+        
+        .phone-icon {
+            width: 50px;
+            height: 80px;
+            border: 3px solid #fff;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            animation: rotatePhone 2s infinite ease-in-out;
+            position: relative;
+        }
+        .phone-icon::after {
+            content: '';
+            position: absolute;
+            bottom: 5px; left: 50%;
+            transform: translateX(-50%);
+            width: 8px; height: 8px;
+            background: #fff;
+            border-radius: 50%;
+        }
+        @keyframes rotatePhone {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(-90deg); }
+            100% { transform: rotate(-90deg); }
+        }
+
+        #main-content {
+            display: none;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 1;
+        }
+
+        @media screen and (orientation: landscape) {
+            #rotate-message { display: none; }
+            #main-content { display: block; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="rotate-message">
+        <div class="phone-icon"></div>
+        <p>Vui lòng xoay ngang thiết bị của bạn</p>
+    </div>
+
+    <div id="main-content">
+        <canvas id="matrixCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // CẤU HÌNH HỆ THỐNG MATRIX NỀN
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789❤️🌸✨";
+        const fontSize = 14; 
+        let columns = canvas.width / fontSize;
+        let drops = Array(Math.floor(columns)).fill(1);
+
+        window.addEventListener('resize', () => {
+            columns = canvas.width / fontSize;
+            drops = Array(Math.floor(columns)).fill(1);
+        });
+
+        // KỊCH BẢN LỜI THOẠI
+        const script = [
+            { text: "3", duration: 1000 },
+            { text: "2", duration: 1000 },
+            { text: "1", duration: 1000 },
+            { text: "Em đồng ý...", duration: 2500 },
+            { text: "Làm người yêu", duration: 2500 },
+            { text: "Anh nhé? ❤️", duration: 2500 },
+            { text: "Anh Yêu Em", duration: 5000 }
+        ];
+
+        let currentStep = 0;
+        let stepStartTime = 0;
+        let scriptStarted = false;
+
+        // Canvas phụ dùng để quét bản đồ chữ
+        const textCanvas = document.createElement('canvas');
+        const textCtx = textCanvas.getContext('2d');
+
+        function updateTextGrid(text) {
+            textCanvas.width = canvas.width;
+            textCanvas.height = canvas.height;
+            
+            textCtx.fillStyle = '#000';
+            textCtx.fillRect(0, 0, textCanvas.width, textCanvas.height);
+            
+            textCtx.fillStyle = '#fff';
+            // Sử dụng font Montserrat siêu dày (900) để khối pixel tạo ra được vuông vắn và rõ nét nhất
+            let size = Math.floor(canvas.height * 0.16);
+            textCtx.font = `900 ${size}px 'Montserrat', sans-serif`;
+            textCtx.textAlign = 'center';
+            textCtx.textBaseline = 'middle';
+            
+            textCtx.fillText(text, textCanvas.width / 2, textCanvas.height / 2);
+        }
+
+        // Kích thước hạt pixel của chữ chính (Càng nhỏ chữ càng mịn, khoảng 3-4px là giống ảnh mẫu nhất)
+        const pixelSize = 3; 
+
+        function draw() {
+            // Đổ nền đen mờ tạo vệt đuôi cho hiệu ứng matrix rơi
+            ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            let activeText = "";
+
+            if (scriptStarted && currentStep < script.length) {
+                const now = Date.now();
+                const step = script[currentStep];
+                
+                if (now - stepStartTime < step.duration) {
+                    activeText = step.text;
+                } else {
+                    currentStep++;
+                    stepStartTime = now + 600; 
+                }
+            }
+
+            if (activeText) {
+                updateTextGrid(activeText);
+            }
+
+            // 1. VẼ NỀN MATRIX CHẠY PHÍA DƯỚI
+            ctx.font = fontSize + "px monospace";
+            for (let i = 0; i < drops.length; i++) {
+                const x = i * fontSize;
+                const y = drops[i] * fontSize;
+                const textChar = letters[Math.floor(Math.random() * letters.length)];
+
+                ctx.fillStyle = "rgba(255, 105, 180, 0.4)"; // Màu hồng neon mờ ảo cho nền
+                ctx.fillText(textChar, x, y);
+
+                if (y > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+
+            // 2. VẼ ĐÈ CHỮ PIXEL KHỐI LÊN TRÊN (Y hệt ảnh mẫu)
+            if (activeText) {
+                // Quét qua toàn bộ màn hình theo kích thước hạt pixel cấu hình
+                for (let x = 0; x < canvas.width; x += pixelSize) {
+                    for (let y = 0; y < canvas.height; y += pixelSize) {
+                        const pixelData = textCtx.getImageData(x, y, 1, 1).data;
+                        
+                        // Nếu vị trí này thuộc về nét chữ lớn
+                        if (pixelData[0] > 128) {
+                            // Vẽ một khối pixel đặc màu xanh/trắng phát sáng nhẹ
+                            ctx.fillStyle = "rgba(173, 216, 230, 0.95)"; // Màu xanh bạc/trắng nhẹ giống hệt trên màn hình điện thoại mẫu
+                            ctx.fillRect(x, y, pixelSize - 0.5, pixelSize - 0.5); // Trừ đi 0.5 để tạo rãnh pixel nhỏ nhìn cực kỳ "nghệ"
+                        }
+                    }
+                }
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        let started = false;
+        function checkOrientation() {
+            if (window.innerWidth > window.innerHeight && !started) {
+                started = true;
+                stepStartTime = Date.now() + 500;
+                scriptStarted = true;
+                requestAnimationFrame(draw);
+            }
+        }
+        
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('load', checkOrientation);
+    </script>
+</body>
+</html>
